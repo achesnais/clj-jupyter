@@ -2,6 +2,8 @@
 
 This is a basic implementation of a Clojure kernel for Jupyter. It should in theory support most of what you'd expect of a basic Clojure Jupyter experience.
 
+You can read [this](http://achesnais.github.io/clojure/jupyter/2016/08/27/introducing-clj-jupyter.html) if you're wondering why I chose to build my own.
+
 ## Usage
 
 ### Vanilla kernel

@@ -1,6 +1,6 @@
 (ns clj-jupyter.heartbeat
-  (:import zmq.ZMQ)
-  (:require [taoensso.timbre :as log]))
+  (:require [taoensso.timbre :as log])
+  (:import zmq.ZMQ))
 
 (set! *warn-on-reflection* true)
 

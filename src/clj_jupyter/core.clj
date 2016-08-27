@@ -3,9 +3,7 @@
              [heartbeat :as heartbeat]
              [shell :as shell]
              [util :as util]]
-            [clojure.data.json :as json]
             [taoensso.timbre :as log])
-  (:import zmq.ZMQ)
   (:gen-class))
 
 (set! *warn-on-reflection* true)
