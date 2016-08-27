@@ -1,0 +1,9 @@
+{
+    "argv":
+    ["java",
+     "-jar",
+     "HOME/Library/Jupyter/kernels/clojure/IClojure.jar",
+     "{connection_file}"],
+    "display_name": "Clojure",
+    "language": "clojure"
+}
