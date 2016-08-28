@@ -1,4 +1,4 @@
-(defproject clj-jupyter "0.1.0"
+(defproject clj-jupyter "0.1.0-SNAPSHOT"
   :description "A Clojure kernel for Jupyter Notebooks."
   :url "https://github.com/achesnais/clj-jupyter"
   :license {:name "Eclipse Public License"

@@ -125,12 +125,22 @@
     (let [responses (nrepl/message client {:op :eval :code code})]
       (if-let [err (some :err responses)]
         {:status :error :value err}
-        {:status :ok :value (nrepl/response-values responses)})))
+        {:status :ok :value (transduce
+                             (comp (filter (comp #{:value :out} first))
+                                   (map (fn [[k v]]
+                                          (case k
+                                            :value (->> (read-string v)
+                                                        pprint/pprint
+                                                        with-out-str)
+                                            :out   v))))
+                             conj
+                             []
+                             (apply concat responses))})))
   (eval-code-to-str [this code]
     (let [{:keys [status value]} (eval-code this code)]
       (case status
         :error value
-        :ok    (transduce (map #(with-out-str (pprint/pprint %))) str value)))))
+        :ok    (apply str value)))))
 
 (defn start-repl []
   (init (->REPL)))
