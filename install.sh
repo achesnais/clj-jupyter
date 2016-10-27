@@ -1,12 +1,18 @@
 #!/bin/bash
 
 UNAMESTR=$(UNAME)
-TARGET_DIR=""
+KERNEL_DIR=""
+KERNEL=clojure
+
+# Provide setup according to kernel-spec
+# https://jupyter-client.readthedocs.io/en/latest/kernels.html#kernel-specs
 if [[ "$UNAMESTR" == 'linux' ]]; then
-	TARGET_DIR=~/.local/share/jupyter/kernels/clojure/
+	KERNEL_DIR=~/.local/share/jupyter/kernels
 elif [[ "$UNAMESTR" == 'Darwin' ]]; then
-	TARGET_DIR=~/Library/Jupyter/kernels/clojure
+	KERNEL_DIR=~/Library/Jupyter/kernels
 fi
+
+TARGET_DIR=$KERNEL_DIR/$KERNEL
 
 mkdir -p $TARGET_DIR
 cp -f target/IClojure.jar $TARGET_DIR/IClojure.jar
