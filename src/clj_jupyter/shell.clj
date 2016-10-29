@@ -136,9 +136,8 @@
                                           (case k
                                             :value (->> (if (nil? *default-data-reader-fn*)
                                                           (binding [*default-data-reader-fn* readers/unknown-literal]
-                                                            (read-string v))
-                                                          (read-string v))
-                                                        ((partial pprint-only-real-nil v))
+                                                            (pprint-only-real-nil v (read-string v)))
+                                                          (pprint/pprint (read-string v)))
                                                         with-out-str)
                                             :out   v))))
                              conj
