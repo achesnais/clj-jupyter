@@ -1,5 +1,6 @@
 (ns clj-jupyter.shell
   (:require [clj-jupyter.util :as util]
+            [clj-jupyter.readers :as readers]
             [clojure.pprint :as pprint]
             [clojure.tools.nrepl :as nrepl]
             [clojure.tools.nrepl.server :as nrepl.server]
@@ -122,15 +123,22 @@
     (nrepl.server/stop-server server))
   IREPL
   (eval-code [{:keys [client]} code]
-    (let [responses (nrepl/message client {:op :eval :code code})]
+    (let [responses (nrepl/message client {:op :eval :code code})
+          pprint-only-real-nil (fn [v f]
+                                 (when (odd? (count (filter identity [(nil? f)
+                                                                      (= v (pr-str '(quote nil)))])))
+                                   (pprint/pprint f)))]
       (if-let [err (some :err responses)]
         {:status :error :value err}
         {:status :ok :value (transduce
                              (comp (filter (comp #{:value :out} first))
                                    (map (fn [[k v]]
                                           (case k
-                                            :value (->> (read-string v)
-                                                        pprint/pprint
+                                            :value (->> (if (nil? *default-data-reader-fn*)
+                                                          (binding [*default-data-reader-fn* readers/unknown-literal]
+                                                            (read-string v))
+                                                          (read-string v))
+                                                        ((partial pprint-only-real-nil v))
                                                         with-out-str)
                                             :out   v))))
                              conj
