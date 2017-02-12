@@ -1,6 +1,6 @@
 # CLJ-Jupyter
 
-**UPDATE 2017-01-23: I have been swarmed with work as well as travelling since the initial release of this, and so I didn't even notice the pull requests + issues opened since I first published it. Huge apologies, as well as thank yous to all those who reached out, I'm back online and hoping to start adding features regularly from now.** 
+**UPDATE 2017-02-12: I actually won't have time to maintain this project for the foreseeable future. Feel free to fork.** 
 
 This is a basic implementation of a Clojure kernel for Jupyter. It should in theory support most of what you'd expect of a basic Clojure Jupyter experience.
 
