@@ -1,8 +1,10 @@
 (ns clj-jupyter.shell
   (:require [clj-jupyter.util :as util]
+            [clj-jupyter.readers :as readers]
             [clojure.pprint :as pprint]
             [clojure.tools.nrepl :as nrepl]
             [clojure.tools.nrepl.server :as nrepl.server]
+            [clojure.tools.nrepl.transport :as nrepl.transport]
             [taoensso.timbre :as log])
   (:import clojure.tools.nrepl.transport.FnTransport
            javax.crypto.Mac
@@ -102,9 +104,32 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; REPL
 
+(defn continue-responses
+  [transport shutdown-signal iopub-socket identities username session execution-count starting-execution-count parent-message-header signer]
+  (while (and (not (realized? shutdown-signal))
+              (= @execution-count starting-execution-count))
+    (let [response (:out (nrepl.transport/recv transport 250))]
+      (when-not (nil? response)
+        (let [header {:msg-id  (str (java.util.UUID/randomUUID))
+                      :date    (util/now)
+                      :version  "5.0"
+                      :username username
+                      :session  session
+                      :msg-type "stream"}]
+          (send-message iopub-socket
+                        {:identities    identities
+                         :header        header
+                         :content       {:execution-count starting-execution-count
+                                         :name "stdout"
+                                         :text response}
+                         :parent-header parent-message-header
+                         :metadata      {}}
+                        signer)))))
+  (println "continue-responses stopped listening for responses"))
+
 (defprotocol IREPL
-  (eval-code [this code])
-  (eval-code-to-str [this code]))
+  (eval-code [this code shutdown-signal iopub-socket identities username session execution-count parent-message-header signer])
+  (eval-code-to-str [this code shutdown-signal iopub-socket identities username session execution-count parent-message-header signer]))
 
 (defrecord REPL []
   ILifecycle
@@ -121,23 +146,32 @@
     (.close ^FnTransport conn)
     (nrepl.server/stop-server server))
   IREPL
-  (eval-code [{:keys [client]} code]
-    (let [responses (nrepl/message client {:op :eval :code code})]
+  (eval-code [{:keys [client]} code shutdown-signal iopub-socket identities username session execution-count parent-message-header signer]
+    (let [transport (:clojure.tools.nrepl/transport (meta client))
+          responses (nrepl/message client {:op :eval :code code})
+          pprint-only-real-nil (fn [v f]
+                                 (when (odd? (count (filter identity [(nil? f)
+                                                                      (= v (pr-str '(quote nil)))])))
+                                   (pprint/pprint f)))]
       (if-let [err (some :err responses)]
         {:status :error :value err}
-        {:status :ok :value (transduce
-                             (comp (filter (comp #{:value :out} first))
-                                   (map (fn [[k v]]
-                                          (case k
-                                            :value (->> (read-string v)
-                                                        pprint/pprint
-                                                        with-out-str)
-                                            :out   v))))
-                             conj
-                             []
-                             (apply concat responses))})))
-  (eval-code-to-str [this code]
-    (let [{:keys [status value]} (eval-code this code)]
+        {:status :ok :value (let [value (transduce
+                                          (comp (filter (comp #{:value :out} first))
+                                            (map (fn [[k v]]
+                                              (case k
+                                                :value (->> (if (nil? *default-data-reader-fn*)
+                                                              (binding [*default-data-reader-fn* readers/unknown-literal]
+                                                                (pprint-only-real-nil v (read-string v)))
+                                                              (pprint/pprint (read-string v)))
+                                                            with-out-str)
+                                                :out   v))))
+                                          conj
+                                          []
+                                          (apply concat responses))
+                                  _ (future (continue-responses transport shutdown-signal iopub-socket identities username session execution-count @execution-count parent-message-header signer))]
+                              value)})))
+  (eval-code-to-str [this code shutdown-signal iopub-socket identities username session execution-count parent-message-header signer]
+    (let [{:keys [status value]} (eval-code this code shutdown-signal iopub-socket identities username session execution-count parent-message-header signer)]
       (case status
         :error value
         :ok    (apply str value)))))
@@ -214,7 +248,7 @@
                                       :msg-type "execute_result"}
                       :content       {:execution-count @execution-count
                                       :data
-                                      {"text/plain" (eval-code-to-str repl code)}}
+                                      {"text/plain" (eval-code-to-str repl code shutdown-signal iopub-socket identities username session execution-count header signer)}}
                       :parent-header header
                       :metadata      {}}
                      signer)
