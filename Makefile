@@ -1,4 +1,4 @@
 all:
 	lein do clean, uberjar
-	cp -f target/IClojure.jar ~/Library/Jupyter/kernels/clojure/IClojure.jar
-	sed 's|HOME|'${HOME}'|' resources/clj_jupyter/kernel.json > ~/Library/Jupyter/kernels/clojure/kernel.json
+	# further os specific locations: https://jupyter-client.readthedocs.io/en/latest/kernels.html#kernel-specs
+	./install.sh
